@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import process from "node:process";
 import { diffAgents, digest, gitEvidence, parseCliJson, redact } from "./core.mjs";
@@ -12,7 +12,10 @@ const interval = Number(process.env.HERDR_REPLAY_INTERVAL_MS || 1200);
 const recordingPath = join(stateDir, "latest.herdr-replay.json");
 const htmlPath = join(stateDir, "latest.html");
 const pidPath = join(stateDir, "recorder.pid");
+const recordingsDir = join(stateDir, "recordings");
+const workspaceFilter = process.env.HERDR_REPLAY_WORKSPACE_ID || "";
 mkdirSync(stateDir, { recursive: true });
+mkdirSync(recordingsDir, { recursive: true });
 
 let recording = { schemaVersion: 1, title: "agent-session", startedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), endedAt: null, agents: [], events: [], redaction: "built-in" };
 let previousAgents = [];
@@ -25,7 +28,10 @@ function persist() { recording.updatedAt = new Date().toISOString(); const temp 
 function sample() {
   const at = new Date().toISOString();
   const snapshot = parseCliJson(call(["api", "snapshot"]));
-  const agents = snapshot.agents || [];
+  const allAgents = snapshot.agents || [];
+  const agents = workspaceFilter ? allAgents.filter(agent => agent.workspace_id === workspaceFilter) : allAgents;
+  const workspace = (snapshot.workspaces || []).find(item => item.workspace_id === workspaceFilter);
+  if (workspace?.label && recording.title === "agent-session") recording.title = workspace.label;
   recording.events.push(...diffAgents(previousAgents, agents, at));
   recording.agents = [...new Map(agents.map(a => [a.pane_id, { paneId:a.pane_id, workspaceId:a.workspace_id, agent:a.agent, cwd:a.cwd }])).values()];
   for (const agent of agents) {
@@ -52,7 +58,7 @@ function sample() {
   previousAgents = agents;
   persist();
 }
-function finish() { if (stopping) return; stopping = true; recording.endedAt = new Date().toISOString(); persist(); exportReplay(recordingPath, htmlPath); try { writeFileSync(pidPath, "", "utf8"); } catch {} process.exit(0); }
+function finish() { if (stopping) return; stopping = true; recording.endedAt = new Date().toISOString(); persist(); exportReplay(recordingPath, htmlPath); const stamp=recording.startedAt.replace(/[:.]/g,"-");const slug=(recording.title||"session").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"session";copyFileSync(recordingPath,join(recordingsDir,`${stamp}-${slug}.herdr-replay.json`));copyFileSync(htmlPath,join(recordingsDir,`${stamp}-${slug}.html`));try { writeFileSync(pidPath, "", "utf8"); } catch {} process.exit(0); }
 process.on("SIGTERM", finish); process.on("SIGINT", finish);
 writeFileSync(pidPath, String(process.pid), "utf8");
 try { sample(); } catch (error) { recording.events.push({ at:new Date().toISOString(), type:"recorder.error", message:error.message }); persist(); }

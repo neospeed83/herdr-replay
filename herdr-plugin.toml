@@ -1,9 +1,18 @@
 id = "herdr-replay"
 name = "Herdr Replay"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.8.0"
 description = "Record and replay multi-agent coding sessions from Herdr events, terminal evidence, and optional Git context"
 platforms = ["linux", "macos", "windows"]
+
+[[build]]
+command = ["node", "src/install.mjs", "install"]
+
+[[actions]]
+id = "toggle"
+title = "Start or stop replay recording"
+contexts = ["workspace"]
+command = ["node", "src/control.mjs", "toggle"]
 
 [[actions]]
 id = "start"
@@ -26,6 +35,16 @@ command = ["node", "src/control.mjs", "status"]
 id = "export"
 title = "Export latest replay"
 command = ["node", "src/control.mjs", "export"]
+
+[[actions]]
+id = "open"
+title = "Open latest replay"
+command = ["node", "src/control.mjs", "open"]
+
+[[actions]]
+id = "remove-keybinding"
+title = "Remove Replay keybinding"
+command = ["node", "src/install.mjs", "remove"]
 
 [[panes]]
 id = "viewer"
