@@ -35,17 +35,14 @@ function sample() {
   recording.events.push(...diffAgents(previousAgents, agents, at));
   recording.agents = [...new Map(agents.map(a => [a.pane_id, { paneId:a.pane_id, workspaceId:a.workspace_id, agent:a.agent, cwd:a.cwd }])).values()];
   for (const agent of agents) {
-    const old = previousAgents.find(a => a.pane_id === agent.pane_id);
-    if (!old || old.revision !== agent.revision || old.state_change_seq !== agent.state_change_seq) {
-      try {
-        const text = redact(call(["pane", "read", agent.pane_id, "--source", "recent-unwrapped", "--lines", "80"])).slice(-24000);
-        const hash = digest(text);
-        if (text.trim() && terminalHashes.get(agent.pane_id) !== hash) {
-          recording.events.push({ at, type:"terminal.snapshot", paneId:agent.pane_id, workspaceId:agent.workspace_id, agent:agent.agent, status:agent.agent_status, hash, text });
-          terminalHashes.set(agent.pane_id, hash);
-        }
-      } catch {}
-    }
+    try {
+      const text = redact(call(["pane", "read", agent.pane_id, "--source", "recent-unwrapped", "--lines", "80"])).slice(-24000);
+      const hash = digest(text);
+      if (text.trim() && terminalHashes.get(agent.pane_id) !== hash) {
+        recording.events.push({ at, type:"terminal.snapshot", paneId:agent.pane_id, workspaceId:agent.workspace_id, agent:agent.agent, status:agent.agent_status, hash, text });
+        terminalHashes.set(agent.pane_id, hash);
+      }
+    } catch {}
     const git = gitEvidence(agent.cwd);
     if (git) {
       const hash = digest(JSON.stringify(git));

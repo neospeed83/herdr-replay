@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - 2026-08-26
+
+- Capture and deduplicate terminal output continuously instead of relying on pane metadata revisions.
+- Open replays at the latest meaningful state rather than an empty starting frame.
+- Reworked the layout for bounded terminal output, clearer evidence labels, and readable short recordings.
+- Escaped event content before rendering it into HTML.
+
 ## [0.2.0] - 2026-08-26
 
 - Added `prefix+f` one-key recording toggle with safe automatic setup.
