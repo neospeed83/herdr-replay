@@ -1,0 +1,36 @@
+id = "herdr-replay"
+name = "Herdr Replay"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Record and replay multi-agent coding sessions from Herdr events, terminal evidence, and optional Git context"
+platforms = ["linux", "macos", "windows"]
+
+[[actions]]
+id = "start"
+title = "Start recording"
+contexts = ["workspace"]
+command = ["node", "src/control.mjs", "start"]
+
+[[actions]]
+id = "stop"
+title = "Stop and export replay"
+contexts = ["workspace"]
+command = ["node", "src/control.mjs", "stop"]
+
+[[actions]]
+id = "status"
+title = "Replay recording status"
+command = ["node", "src/control.mjs", "status"]
+
+[[actions]]
+id = "export"
+title = "Export latest replay"
+command = ["node", "src/control.mjs", "export"]
+
+[[panes]]
+id = "viewer"
+title = "Herdr Replay"
+placement = "popup"
+width = "86%"
+height = "82%"
+command = ["node", "src/viewer.mjs"]

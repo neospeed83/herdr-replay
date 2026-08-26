@@ -1,0 +1,11 @@
+{
+  "name": "herdr-replay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Record and replay multi-agent Herdr sessions",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" }
+}
