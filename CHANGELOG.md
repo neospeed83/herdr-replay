@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.3] - 2026-08-26
+
+- Hide the parallel-agent timeline for single-agent recordings, where it duplicated the global playback scrubber.
+- Rename the multi-agent view to “Parallel agent activity” for clarity.
+
 ## [0.2.2] - 2026-08-26
 
 - Prevent Git changed-file arrays from overwriting the displayed agent status.
