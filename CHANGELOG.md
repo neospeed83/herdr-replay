@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2] - 2026-08-26
+
+- Prevent Git changed-file arrays from overwriting the displayed agent status.
+- Keep long terminal lines intact with horizontal scrolling.
+- Use the available viewport instead of leaving a large empty area.
+- Display recording dates in the viewer's local format.
+
 ## [0.2.1] - 2026-08-26
 
 - Capture and deduplicate terminal output continuously instead of relying on pane metadata revisions.

@@ -38,8 +38,8 @@ export function gitEvidence(cwd, runner = execFileSync) {
   try {
     const root = runner("git", ["-C", cwd, "rev-parse", "--show-toplevel"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
     const branch = runner("git", ["-C", root, "branch", "--show-current"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    const status = runner("git", ["-C", root, "status", "--short"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim().split("\n").filter(Boolean).slice(0, 100);
+    const changes = runner("git", ["-C", root, "status", "--short"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim().split("\n").filter(Boolean).slice(0, 100);
     const head = runner("git", ["-C", root, "log", "-1", "--pretty=%H%x1f%s"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-    return { root, branch, status, head };
+    return { root, branch, changes, head };
   } catch { return null; }
 }
