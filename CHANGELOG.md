@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.4] - 2026-08-28
+
+- Resolve the native viewer executable relative to the plugin root.
+
 ## [0.3.3] - 2026-08-28
 
 - Preserve config backups and respect `XDG_CONFIG_HOME` in the native installer.
