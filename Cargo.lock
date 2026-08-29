@@ -191,7 +191,7 @@ dependencies = [
 
 [[package]]
 name = "herdr-replay"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "chrono",
  "ctrlc",

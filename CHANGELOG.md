@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.3] - 2026-08-28
+
+- Preserve config backups and respect `XDG_CONFIG_HOME` in the native installer.
+
 ## [0.3.2] - 2026-08-28
 
 - Restore agent discovery, state transitions, terminal snapshots, and Git evidence in the Rust recorder.

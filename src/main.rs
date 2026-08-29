@@ -231,7 +231,10 @@ fn binding(remove: bool) -> io::Result<()> {
     let p = if cfg!(windows) {
         PathBuf::from(env::var("APPDATA").unwrap()).join("herdr/config.toml")
     } else {
-        PathBuf::from(env::var("HOME").unwrap()).join(".config/herdr/config.toml")
+        env::var_os("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(env::var("HOME").unwrap()).join(".config"))
+            .join("herdr/config.toml")
     };
     let old = fs::read_to_string(&p).unwrap_or_default();
     let new = if remove {
@@ -245,6 +248,10 @@ fn binding(remove: bool) -> io::Result<()> {
     };
     if new != old {
         fs::create_dir_all(p.parent().unwrap())?;
+        let backup = p.with_file_name("config.toml.bak-herdr-replay");
+        if p.exists() && !backup.exists() {
+            fs::copy(&p, backup)?;
+        }
         fs::write(p, new)
     } else {
         Ok(())
