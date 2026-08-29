@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1] - 2026-08-28
+
+- Rewrite recording, redaction, playback export, and controls in Rust.
+- Publish prebuilt binaries for macOS, Linux, and Windows.
+- Remove the Node.js runtime requirement.
+
 ## [0.2.3] - 2026-08-26
 
 - Hide the parallel-agent timeline for single-agent recordings, where it duplicated the global playback scrubber.

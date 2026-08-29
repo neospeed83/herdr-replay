@@ -40,10 +40,13 @@ The stop and export actions print the exact paths to the generated JSON and HTML
 
 Recordings can contain source code and terminal output. Built-in redaction is defense in depth, not a guarantee. Review a replay before sharing it publicly.
 
+## Runtime
+
+Herdr Replay is a native Rust plugin. Installation downloads the matching prebuilt binary; Node.js and Rust are not required.
+
 ## Requirements
 
 - Herdr 0.8.0+
-- Node.js 20+
 
 ## Uninstall
 

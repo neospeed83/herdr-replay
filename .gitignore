@@ -1,4 +1,3 @@
 .herdr-replay/
-node_modules/
 target/
 bin/

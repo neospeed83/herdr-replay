@@ -7,7 +7,7 @@ jobs:
       matrix:
         include:
           - { os: macos-14, target: aarch64-apple-darwin, asset: herdr-replay-macos-aarch64 }
-          - { os: macos-13, target: x86_64-apple-darwin, asset: herdr-replay-macos-x86_64 }
+          - { os: macos-15-intel, target: x86_64-apple-darwin, asset: herdr-replay-macos-x86_64 }
           - { os: ubuntu-24.04, target: x86_64-unknown-linux-gnu, asset: herdr-replay-linux-x86_64 }
           - { os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, asset: herdr-replay-linux-aarch64 }
           - { os: windows-2025, target: x86_64-pc-windows-msvc, asset: herdr-replay-windows-x86_64.exe }

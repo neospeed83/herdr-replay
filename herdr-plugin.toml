@@ -1,6 +1,6 @@
 id = "herdr-replay"
 name = "Herdr Replay"
-version = "0.3.0"
+version = "0.3.1"
 min_herdr_version = "0.8.0"
 description = "Record and replay multi-agent coding sessions from Herdr events, terminal evidence, and optional Git context"
 platforms = ["linux", "macos", "windows"]
