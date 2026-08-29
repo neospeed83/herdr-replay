@@ -1,50 +1,56 @@
 id = "herdr-replay"
 name = "Herdr Replay"
-version = "0.2.3"
+version = "0.3.0"
 min_herdr_version = "0.8.0"
 description = "Record and replay multi-agent coding sessions from Herdr events, terminal evidence, and optional Git context"
 platforms = ["linux", "macos", "windows"]
 
 [[build]]
-command = ["node", "src/install.mjs", "install"]
+command = ["sh", "scripts/install-binary.sh"]
+platforms = ["linux", "macos"]
+[[build]]
+command = ["powershell", "-ExecutionPolicy", "Bypass", "-File", "scripts/install-binary.ps1"]
+platforms = ["windows"]
+[[build]]
+command = ["bin/herdr-replay", "install"]
 
 [[actions]]
 id = "toggle"
 title = "Start or stop replay recording"
 contexts = ["workspace"]
-command = ["node", "src/control.mjs", "toggle"]
+command = ["bin/herdr-replay", "toggle"]
 
 [[actions]]
 id = "start"
 title = "Start recording"
 contexts = ["workspace"]
-command = ["node", "src/control.mjs", "start"]
+command = ["bin/herdr-replay", "start"]
 
 [[actions]]
 id = "stop"
 title = "Stop and export replay"
 contexts = ["workspace"]
-command = ["node", "src/control.mjs", "stop"]
+command = ["bin/herdr-replay", "stop"]
 
 [[actions]]
 id = "status"
 title = "Replay recording status"
-command = ["node", "src/control.mjs", "status"]
+command = ["bin/herdr-replay", "status"]
 
 [[actions]]
 id = "export"
 title = "Export latest replay"
-command = ["node", "src/control.mjs", "export"]
+command = ["bin/herdr-replay", "export"]
 
 [[actions]]
 id = "open"
 title = "Open latest replay"
-command = ["node", "src/control.mjs", "open"]
+command = ["bin/herdr-replay", "open"]
 
 [[actions]]
 id = "remove-keybinding"
 title = "Remove Replay keybinding"
-command = ["node", "src/install.mjs", "remove"]
+command = ["bin/herdr-replay", "remove-keybinding"]
 
 [[panes]]
 id = "viewer"
@@ -52,4 +58,4 @@ title = "Herdr Replay"
 placement = "popup"
 width = "86%"
 height = "82%"
-command = ["node", "src/viewer.mjs"]
+command = ["bin/herdr-replay", "show"]

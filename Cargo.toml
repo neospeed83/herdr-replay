@@ -1,0 +1,17 @@
+[package]
+name="herdr-replay"
+version="0.3.0"
+edition="2024"
+license="MIT"
+[dependencies]
+chrono="0.4"
+ctrlc="3"
+regex="1"
+serde={version="1",features=["derive"]}
+serde_json="1"
+sha2="0.10"
+[profile.release]
+lto=true
+strip=true
+codegen-units=1
+panic="abort"
