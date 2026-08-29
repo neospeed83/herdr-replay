@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.2] - 2026-08-28
+
+- Restore agent discovery, state transitions, terminal snapshots, and Git evidence in the Rust recorder.
+- Detach the recorder reliably from short-lived plugin actions.
+- Use native Windows process discovery, termination, and HTML opening commands.
+
 ## [0.3.1] - 2026-08-28
 
 - Rewrite recording, redaction, playback export, and controls in Rust.

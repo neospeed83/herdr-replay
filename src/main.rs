@@ -34,12 +34,54 @@ fn alive(pid: u32) -> bool {
     if pid == 0 {
         return false;
     }
+    if cfg!(windows) {
+        return Command::new("tasklist")
+            .args(["/FI", &format!("PID eq {pid}"), "/NH"])
+            .output()
+            .is_ok_and(|o| {
+                o.status.success() && String::from_utf8_lossy(&o.stdout).contains(&pid.to_string())
+            });
+    }
     Command::new("kill")
         .args(["-0", &pid.to_string()])
         .stderr(Stdio::null())
         .stdout(Stdio::null())
         .status()
         .is_ok_and(|s| s.success())
+}
+fn terminate(pid: u32) -> io::Result<()> {
+    let status = if cfg!(windows) {
+        Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T"])
+            .status()?
+    } else {
+        Command::new("kill").arg(pid.to_string()).status()?
+    };
+    if status.success() {
+        Ok(())
+    } else {
+        Err(io::Error::other("unable to stop recorder"))
+    }
+}
+fn spawn_recorder() -> io::Result<std::process::Child> {
+    let mut command = Command::new(env::current_exe()?);
+    command
+        .arg("recorder")
+        .env("HERDR_REPLAY_STATE_DIR", dir())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x00000008 | 0x00000200);
+    }
+    command.spawn()
 }
 fn pid() -> u32 {
     fs::read_to_string(paths().0)
@@ -72,6 +114,28 @@ fn snapshot() -> io::Result<Value> {
         .unwrap_or(&v)
         .clone())
 }
+fn git_evidence(cwd: &str) -> Option<Value> {
+    let run = |args: &[&str]| output("git", args, Some(std::path::Path::new(cwd))).ok();
+    let root = run(&["rev-parse", "--show-toplevel"])?;
+    let branch = run(&["-C", &root, "branch", "--show-current"])?;
+    let changes = run(&["-C", &root, "status", "--short"])?;
+    let head = run(&["-C", &root, "log", "-1", "--pretty=%H%x1f%s"])?;
+    Some(
+        json!({"root":root,"branch":branch,"changes":changes.lines().take(100).collect::<Vec<_>>(),"head":head}),
+    )
+}
+fn output(program: &str, args: &[&str], cwd: Option<&std::path::Path>) -> io::Result<String> {
+    let mut command = Command::new(program);
+    command.args(args);
+    if let Some(cwd) = cwd {
+        command.current_dir(cwd);
+    }
+    let result = command.output()?;
+    if !result.status.success() {
+        return Err(io::Error::other(String::from_utf8_lossy(&result.stderr)));
+    }
+    Ok(String::from_utf8_lossy(&result.stdout).trim().into())
+}
 fn html(r: &Value) -> String {
     let data = serde_json::to_string(r).unwrap().replace('<', "\\u003c");
     format!(
@@ -93,13 +157,37 @@ fn recorder() -> io::Result<()> {
     let started = Utc::now().to_rfc3339();
     let mut rec = json!({"schemaVersion":2,"title":"agent-session","startedAt":started,"updatedAt":started,"endedAt":null,"agents":[],"events":[],"redaction":"built-in"});
     let mut hashes: HashMap<String, String> = HashMap::new();
+    let mut git_hashes: HashMap<String, String> = HashMap::new();
+    let mut previous: HashMap<String, Value> = HashMap::new();
+    let workspace_filter = env::var("HERDR_REPLAY_WORKSPACE_ID")
+        .or_else(|_| env::var("HERDR_WORKSPACE_ID"))
+        .unwrap_or_default();
     while !stop.load(Ordering::SeqCst) {
         if let Ok(s) = snapshot() {
             let agents = s
                 .get("agents")
                 .and_then(Value::as_array)
                 .cloned()
-                .unwrap_or_default();
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|a| {
+                    workspace_filter.is_empty()
+                        || a["workspace_id"].as_str() == Some(&workspace_filter)
+                })
+                .collect::<Vec<_>>();
+            let current = agents
+                .iter()
+                .filter_map(|a| a["pane_id"].as_str().map(|p| (p.to_string(), a.clone())))
+                .collect::<HashMap<_, _>>();
+            let at = Utc::now().to_rfc3339();
+            for (pane, a) in &current {
+                match previous.get(pane) { None=>rec["events"].as_array_mut().unwrap().push(json!({"at":at,"type":"agent.discovered","paneId":pane,"workspaceId":a["workspace_id"],"agent":a["agent"],"status":a["agent_status"],"cwd":a["cwd"]})), Some(old) if old["agent_status"]!=a["agent_status"]||old["state_change_seq"]!=a["state_change_seq"]=>rec["events"].as_array_mut().unwrap().push(json!({"at":at,"type":"agent.state","paneId":pane,"workspaceId":a["workspace_id"],"agent":a["agent"],"from":old["agent_status"],"status":a["agent_status"],"cwd":a["cwd"]})), _=>{} }
+            }
+            for (pane, a) in &previous {
+                if !current.contains_key(pane) {
+                    rec["events"].as_array_mut().unwrap().push(json!({"at":at,"type":"agent.closed","paneId":pane,"workspaceId":a["workspace_id"],"agent":a["agent"],"status":a["agent_status"],"cwd":a["cwd"]}))
+                }
+            }
             rec["agents"]=Value::Array(agents.iter().map(|a|json!({"paneId":a["pane_id"],"workspaceId":a["workspace_id"],"agent":a["agent"],"cwd":a["cwd"]})).collect());
             for a in agents {
                 let pane = a["pane_id"].as_str().unwrap_or("");
@@ -119,7 +207,16 @@ fn recorder() -> io::Result<()> {
                         hashes.insert(pane.into(), hash);
                     }
                 }
+                if let Some(git) = a["cwd"].as_str().and_then(git_evidence) {
+                    let root = git["root"].as_str().unwrap_or("");
+                    let hash = format!("{:x}", Sha256::digest(serde_json::to_vec(&git)?));
+                    if git_hashes.get(root) != Some(&hash) {
+                        rec["events"].as_array_mut().unwrap().push(json!({"at":Utc::now().to_rfc3339(),"type":"git.snapshot","paneId":pane,"workspaceId":a["workspace_id"],"agent":a["agent"],"repo":std::path::Path::new(root).file_name().unwrap_or_default(),"root":root,"branch":git["branch"],"changes":git["changes"],"head":git["head"]}));
+                        git_hashes.insert(root.into(), hash);
+                    }
+                }
             }
+            previous = current;
         }
         rec["updatedAt"] = json!(Utc::now().to_rfc3339());
         fs::write(&rp, serde_json::to_vec_pretty(&rec)?)?;
@@ -162,32 +259,33 @@ fn main() -> ExitCode {
             "remove-keybinding" => binding(true),
             "recorder" => recorder(),
             "start" | "toggle" if !alive(pid()) => {
-                let child = Command::new(env::current_exe()?)
-                    .arg("recorder")
-                    .env("HERDR_REPLAY_STATE_DIR", dir())
-                    .stdin(Stdio::null())
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .spawn()?;
+                let child = spawn_recorder()?;
                 fs::write(paths().0, child.id().to_string())?;
                 println!("Recording started (PID {}).", child.id());
                 Ok(())
             }
             "stop" | "toggle" => {
-                Command::new("kill").arg(pid().to_string()).status()?;
+                terminate(pid())?;
                 thread::sleep(Duration::from_secs(2));
+                export()?;
                 println!("Recording stopped. Replay: {}", paths().2.display());
                 Ok(())
             }
             "export" => export(),
             "open" => {
-                Command::new(if cfg!(target_os = "macos") {
-                    "open"
+                if cfg!(windows) {
+                    Command::new("cmd")
+                        .args(["/c", "start", "", paths().2.to_str().unwrap()])
+                        .spawn()?;
                 } else {
-                    "xdg-open"
-                })
-                .arg(paths().2)
-                .spawn()?;
+                    Command::new(if cfg!(target_os = "macos") {
+                        "open"
+                    } else {
+                        "xdg-open"
+                    })
+                    .arg(paths().2)
+                    .spawn()?;
+                }
                 Ok(())
             }
             "show" => {
